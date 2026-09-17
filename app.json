@@ -1,7 +1,8 @@
 {
   "expo": {
-    "name": "QR-ATT",
-    "slug": "QR-ATT",
+    "name": "QRAPP_MAGBANUA",
+    "slug": "qrappmagbanua",
+    "owner": "cctc-ccs",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -9,9 +10,11 @@
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.cctcccs.qrappmagbanua"
     },
     "android": {
+      "package": "com.cctcccs.qrappmagbanua",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -37,10 +40,17 @@
         }
       ],
       "expo-sqlite",
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      "expo-secure-store"
     ],
     "experiments": {
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "596dc5fa-2e3a-47cb-b9cd-09dfcea239d3"
+      }
     }
   }
 }
