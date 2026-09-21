@@ -8,6 +8,11 @@ type AuthState = {
   loading: boolean;
 };
 
+export type SignUpProfile = {
+  full_name: string;
+  role: 'student' | 'teacher';
+};
+
 let globalSession: Session | null = null;
 let globalUser: User | null = null;
 let globalLoading = false;
@@ -30,7 +35,9 @@ export function useAuth(): AuthState {
   useEffect(() => {
     const listener = () => forceRender((n) => n + 1);
     listeners.add(listener);
-    return () => { listeners.delete(listener); };
+    return () => {
+      listeners.delete(listener);
+    };
   }, []);
 
   return {
@@ -40,8 +47,18 @@ export function useAuth(): AuthState {
   };
 }
 
-export async function signUp(email: string, password: string) {
+export async function signUp(
+  email: string,
+  password: string,
+  profile?: SignUpProfile
+) {
   const { data, error } = await supabase.auth.signUp({ email, password });
+  if (!error && data.session && profile) {
+    await supabase
+      .from('profiles')
+      .update({ full_name: profile.full_name, role: profile.role })
+      .eq('id', data.session.user.id);
+  }
   if (!error && data.session) {
     setAuth(data.session);
   }
@@ -57,7 +74,10 @@ export async function signIn(email: string, password: string) {
 }
 
 export async function signOut() {
-  setAuth(null);
-  supabase.auth.signOut().catch(() => {});
+  listeners.clear();
+  globalSession = null;
+  globalUser = null;
+  globalLoading = false;
+  await supabase.auth.signOut().catch(() => {});
   return { error: null };
 }

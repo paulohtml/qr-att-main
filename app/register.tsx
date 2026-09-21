@@ -1,17 +1,18 @@
 import { useState } from 'react';
 import {
+  ActivityIndicator,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
-  View,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  ActivityIndicator,
   TouchableWithoutFeedback,
-  Keyboard,
+  View,
 } from 'react-native';
-import { Link } from 'expo-router';
+import { Link, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import AppButton from '@/components/AppButton';
@@ -20,7 +21,10 @@ import { COLORS } from '@/constants/colors';
 import { signUp } from '@/lib/auth';
 
 export default function RegisterScreen() {
+  const router = useRouter();
   const insets = useSafeAreaInsets();
+  const [fullName, setFullName] = useState('');
+  const [role, setRole] = useState<'student' | 'teacher'>('student');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -31,7 +35,7 @@ export default function RegisterScreen() {
   const handleRegister = async () => {
     setError(null);
 
-    if (!email.trim() || !password || !confirmPassword) {
+    if (!fullName.trim() || !email.trim() || !password || !confirmPassword) {
       setError('All fields are required.');
       return;
     }
@@ -49,14 +53,19 @@ export default function RegisterScreen() {
     setLoading(true);
 
     try {
-      const { error: authError } = await signUp(email.trim(), password);
+      const { data, error: authError } = await signUp(email.trim(), password, {
+        full_name: fullName.trim(),
+        role,
+      });
 
       if (authError) {
         setError(authError.message);
+      } else if (data.session) {
+        router.replace('/(tabs)');
       } else {
         setSuccess(true);
       }
-    } catch (err) {
+    } catch {
       setError('An unexpected error occurred. Please try again.');
     } finally {
       setLoading(false);
@@ -81,14 +90,16 @@ export default function RegisterScreen() {
             </View>
 
             <Text style={styles.title}>Create Account</Text>
-            <Text style={styles.subtitle}>Register to start recording attendance</Text>
+            <Text style={styles.subtitle}>
+              Register to start recording attendance
+            </Text>
 
             {success ? (
               <View style={styles.successContainer}>
                 <Text style={styles.successTitle}>Check your email!</Text>
                 <Text style={styles.successText}>
-                  We sent a confirmation link to {email}. Click the link to verify your
-                  account, then come back and sign in.
+                  We sent a confirmation link to {email}. Click the link to verify
+                  your account, then come back and sign in.
                 </Text>
                 <Link href="/login" style={styles.link}>
                   Back to Sign In
@@ -96,6 +107,53 @@ export default function RegisterScreen() {
               </View>
             ) : (
               <View style={styles.form}>
+                <Text style={styles.label}>Full Name</Text>
+                <TextInput
+                  style={styles.input}
+                  value={fullName}
+                  onChangeText={setFullName}
+                  placeholder="e.g. Juan dela Cruz"
+                  placeholderTextColor={COLORS.textSecondary}
+                  autoCapitalize="words"
+                  editable={!loading}
+                />
+
+                <Text style={styles.label}>I am a...</Text>
+                <View style={styles.roleRow}>
+                  <Pressable
+                    style={[
+                      styles.roleChip,
+                      role === 'student' && styles.roleChipActive,
+                    ]}
+                    onPress={() => setRole('student')}
+                  >
+                    <Text
+                      style={[
+                        styles.roleChipText,
+                        role === 'student' && styles.roleChipTextActive,
+                      ]}
+                    >
+                      Student
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    style={[
+                      styles.roleChip,
+                      role === 'teacher' && styles.roleChipActive,
+                    ]}
+                    onPress={() => setRole('teacher')}
+                  >
+                    <Text
+                      style={[
+                        styles.roleChipText,
+                        role === 'teacher' && styles.roleChipTextActive,
+                      ]}
+                    >
+                      Teacher
+                    </Text>
+                  </Pressable>
+                </View>
+
                 <Text style={styles.label}>Email</Text>
                 <TextInput
                   style={styles.input}
@@ -133,7 +191,11 @@ export default function RegisterScreen() {
                 {error && <Text style={styles.error}>{error}</Text>}
 
                 {loading ? (
-                  <ActivityIndicator size="large" color={COLORS.primary} style={styles.loader} />
+                  <ActivityIndicator
+                    size="large"
+                    color={COLORS.primary}
+                    style={styles.loader}
+                  />
                 ) : (
                   <AppButton
                     theme="primary"
@@ -200,7 +262,7 @@ const styles = StyleSheet.create({
   },
   input: {
     backgroundColor: COLORS.card,
-    borderRadius: 14,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: COLORS.border,
     paddingHorizontal: 14,
@@ -208,9 +270,36 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: COLORS.textPrimary,
   },
+  roleRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginVertical: 6,
+  },
+  roleChip: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.card,
+    alignItems: 'center',
+  },
+  roleChipActive: {
+    borderColor: COLORS.primary,
+    backgroundColor: COLORS.primary + '14',
+  },
+  roleChipText: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: COLORS.textSecondary,
+  },
+  roleChipTextActive: {
+    fontWeight: '700',
+    color: COLORS.primary,
+  },
   error: {
     fontSize: 14,
-    color: '#C62828',
+    color: COLORS.danger,
     textAlign: 'center',
     marginTop: 12,
     marginBottom: 4,
@@ -229,7 +318,9 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     padding: 20,
     backgroundColor: COLORS.card,
-    borderRadius: 14,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
   successTitle: {
     fontSize: 18,

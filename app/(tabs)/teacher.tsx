@@ -2,8 +2,9 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import DateTimePicker, {
   type DateTimePickerEvent,
 } from '@react-native-community/datetimepicker';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import {
+  ActivityIndicator,
   Platform,
   Pressable,
   ScrollView,
@@ -12,11 +13,15 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { useFocusEffect } from 'expo-router';
 import QRCode from 'react-native-qrcode-svg';
 
 import AppButton from '@/components/AppButton';
 import { COLORS } from '@/constants/colors';
-import { createEvent } from '@/lib/database';
+import { useAuth } from '@/lib/auth';
+import { createEvent } from '@/lib/events';
+import { getProfile, type Role } from '@/lib/profiles';
+import { buildQRPayload } from '@/lib/qr';
 
 function toLocalISO(date: Date) {
   const pad = (n: number) => String(n).padStart(2, '0');
@@ -43,6 +48,10 @@ const QUICK_END_OPTIONS = [
 type EditTarget = 'start' | 'end';
 
 export default function TeacherScreen() {
+  const { user } = useAuth();
+  const [role, setRole] = useState<Role | null>(null);
+  const [roleLoading, setRoleLoading] = useState(true);
+
   const [title, setTitle] = useState('');
   const [eventId, setEventId] = useState('');
   const [startDate, setStartDate] = useState(() => new Date());
@@ -55,6 +64,26 @@ export default function TeacherScreen() {
   const [message, setMessage] = useState<string | null>(null);
 
   const isAndroid = Platform.OS === 'android';
+
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      if (!user) {
+        setRoleLoading(false);
+        return () => {
+          active = false;
+        };
+      }
+      getProfile(user.id).then((profile) => {
+        if (!active) return;
+        setRole(profile?.role ?? 'student');
+        setRoleLoading(false);
+      });
+      return () => {
+        active = false;
+      };
+    }, [user])
+  );
 
   const openPicker = (target: EditTarget) => {
     setMessage(null);
@@ -112,19 +141,36 @@ export default function TeacherScreen() {
       return;
     }
 
-    createEvent(event).then(() => {
+    createEvent(event).then(({ error }) => {
+      if (error) {
+        setMessage('Could not save the event. Please try again.');
+        return;
+      }
       setMessage('Event saved! Scan the QR with the Scan tab to test it.');
-      setPayload(
-        JSON.stringify({
-          v: 1,
-          event: event.eventId,
-          title: event.title,
-          start: event.start,
-          end: event.end,
-        })
-      );
+      setPayload(buildQRPayload(event));
     });
   };
+
+  if (roleLoading) {
+    return (
+      <View style={styles.centerContainer}>
+        <ActivityIndicator size="large" color={COLORS.primary} />
+        <Text style={styles.loadingText}>Checking permissions...</Text>
+      </View>
+    );
+  }
+
+  if (role !== 'teacher') {
+    return (
+      <View style={styles.centerContainer}>
+        <Ionicons name="lock-closed-outline" size={64} color={COLORS.textSecondary} />
+        <Text style={styles.lockTitle}>Teachers Only</Text>
+        <Text style={styles.lockSubtitle}>
+          Only teacher accounts can create and manage attendance events.
+        </Text>
+      </View>
+    );
+  }
 
   return (
     <ScrollView
@@ -246,6 +292,31 @@ const styles = StyleSheet.create({
     paddingTop: 24,
     paddingBottom: 40,
   },
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 32,
+    backgroundColor: COLORS.background,
+  },
+  loadingText: {
+    marginTop: 12,
+    color: COLORS.textSecondary,
+    fontSize: 14,
+  },
+  lockTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+    marginTop: 16,
+  },
+  lockSubtitle: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+    marginTop: 8,
+    lineHeight: 20,
+  },
   title: {
     fontSize: 20,
     fontWeight: '600',
@@ -358,4 +429,3 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
 });
-
