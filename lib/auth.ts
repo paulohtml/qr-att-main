@@ -74,10 +74,15 @@ export async function signIn(email: string, password: string) {
 }
 
 export async function signOut() {
-  listeners.clear();
-  globalSession = null;
-  globalUser = null;
-  globalLoading = false;
-  await supabase.auth.signOut().catch(() => {});
+  // 1. Instantly update global state to null
+  setAuth(null);
+
+  // 2. Perform background cleanup
+  try {
+    await supabase.auth.signOut();
+  } catch (err) {
+    console.warn('Sign out warning:', err);
+  }
+
   return { error: null };
 }

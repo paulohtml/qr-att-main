@@ -1,29 +1,32 @@
-import { useEffect } from 'react';
-import { Stack, useRouter, useSegments, useRootNavigationState } from 'expo-router';
-
+import { useEffect, useState } from 'react';
+import { Stack, router } from 'expo-router';
 import { useAuth } from '@/lib/auth';
 
 export default function RootLayout() {
-  const { user, loading } = useAuth();
-  const segments = useSegments();
-  const router = useRouter();
-  const navigationState = useRootNavigationState();
+  const { session, loading } = useAuth();
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
-    // Wait until both the navigation tree and auth loading state are ready
-    if (!navigationState?.key || loading) return;
+    setIsMounted(true);
+  }, []);
 
-    const inTabsGroup = segments[0] === '(tabs)';
+  useEffect(() => {
+    if (!isMounted || loading) return;
 
-    if (!user && inTabsGroup) {
-      router.replace('/login');
-    } else if (user && !inTabsGroup) {
-      router.replace('/(tabs)');
-    }
-  }, [user, loading, segments, navigationState?.key]);
+    const timer = setTimeout(() => {
+      if (session) {
+        router.replace('/(tabs)');
+      } else {
+        router.replace('/login');
+      }
+    }, 0);
+
+    return () => clearTimeout(timer);
+  }, [session, loading, isMounted]);
 
   return (
     <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="index" />
       <Stack.Screen name="login" />
       <Stack.Screen name="register" />
       <Stack.Screen name="(tabs)" />

@@ -13,7 +13,6 @@ export default function ProfileScreen() {
   const [editing, setEditing] = useState(false);
   const [draftName, setDraftName] = useState('');
   const [saving, setSaving] = useState(false);
-  const [loading, setLoading] = useState(false);
   const router = useRouter();
 
   const loadProfile = useCallback(async () => {
@@ -48,13 +47,11 @@ export default function ProfileScreen() {
   };
 
   const handleSignOut = async () => {
-    setLoading(true);
     try {
       await signOut();
+      // _layout.tsx will automatically route to /login when session becomes null
     } catch (err: any) {
       Alert.alert('Error', err?.message || 'Failed to sign out.');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -119,7 +116,7 @@ export default function ProfileScreen() {
         title="Sign Out"
         icon="log-out-outline"
         onPress={handleSignOut}
-        disabled={loading}
+        disabled={false}
       />
     </View>
   );
