@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { StyleSheet, Text, View, Alert, TextInput, Pressable } from 'react-native';
+import { StyleSheet, Text, View, Alert, TextInput, Pressable, ScrollView } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 
 import AppButton from '@/components/AppButton';
