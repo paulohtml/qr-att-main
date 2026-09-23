@@ -49,7 +49,6 @@ export default function ProfileScreen() {
   const handleSignOut = async () => {
     try {
       await signOut();
-      // _layout.tsx will automatically route to /login when session becomes null
     } catch (err: any) {
       Alert.alert('Error', err?.message || 'Failed to sign out.');
     }
@@ -112,7 +111,7 @@ export default function ProfileScreen() {
         </View>
       )}
 
-      <AppButton
+     <AppButton
         title="Sign Out"
         icon="log-out-outline"
         onPress={handleSignOut}
